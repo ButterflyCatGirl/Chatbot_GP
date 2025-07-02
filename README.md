@@ -4,7 +4,7 @@ This is a CHATBOT App for my graduation project...
 
 ## Demo App
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chatbotehealth.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ehealthchatbot.streamlit.app/)
 
 ## GitHub Codespaces
 
