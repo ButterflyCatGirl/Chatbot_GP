@@ -1,5 +1,4 @@
-# Create app.py
-echo 'import streamlit as st
+import streamlit as st
 from PIL import Image
 import torch
 from transformers import (
