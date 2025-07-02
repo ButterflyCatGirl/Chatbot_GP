@@ -4,3 +4,5 @@ torch
 Pillow 
 pandas 
 matplotlib
+numpy
+skikit-learn
