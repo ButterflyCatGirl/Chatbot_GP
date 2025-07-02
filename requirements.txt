@@ -1,8 +1,6 @@
 streamlit
+torch
 transformers
-torch 
-Pillow 
-pandas 
-matplotlib
-numpy
-skikit-learn
+Pillow
+accelerate
+bitsandbytes
