@@ -1,3 +1,18 @@
+# Create app.py
+echo 'import streamlit as st
+from PIL import Image
+import torch
+from transformers import (
+    BlipProcessor, 
+    BlipForQuestionAnswering,
+    MarianTokenizer,
+    MarianMTModel
+)
+import logging
+import time
+
+
+
 import streamlit as st
 from PIL import Image
 import torch
