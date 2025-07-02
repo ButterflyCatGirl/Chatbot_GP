@@ -3,21 +3,25 @@ from PIL import Image
 import torch
 from transformers import (
     AutoProcessor,
-    AutoModelForCausalLM,
+    LlavaForConditionalGeneration,  # Use the specific LLaVA model class
     MarianTokenizer,
     MarianMTModel
 )
 import logging
+import os
 
 # Disable unnecessary logging
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
+# Set environment variable to prevent bitsandbytes welcome message
+os.environ["BITSANDBYTES_NOWELCOME"] = "1"
+
 # Load models (cached for performance)
 @st.cache_resource(show_spinner=False)
 def load_models():
-    # Load VQA model
+    # Load VQA model using the specific LLaVA class
     processor = AutoProcessor.from_pretrained("Mohamed264/llava-medical-VQA-lora-merged3")
-    llava_model = AutoModelForCausalLM.from_pretrained(
+    llava_model = LlavaForConditionalGeneration.from_pretrained(
         "Mohamed264/llava-medical-VQA-lora-merged3",
         torch_dtype=torch.float16,
         device_map="auto"
@@ -113,7 +117,7 @@ def main():
     
     with col1:
         st.subheader("🔍 ارفع صورة الأشعة")
-        uploaded_file = st.file_uploader("Upload medical image", type=["jpg", "png", "jpeg"], label_visibility="visible")
+        uploaded_file = st.file_uploader(" ", type=["jpg", "png", "jpeg"])
         
         if uploaded_file:
             try:
@@ -124,7 +128,7 @@ def main():
     
     with col2:
         st.subheader("💬 أدخل سؤالك")
-        question = st.text_area("Enter your question", placeholder="اكتب سؤالك هنا...", height=150, label_visibility="visible")
+        question = st.text_area(" ", placeholder="اكتب سؤالك هنا...", height=150)
         
         if st.button("الحصول على الإجابة", use_container_width=True):
             if not uploaded_file or not question.strip():
