@@ -1,5 +1,5 @@
 import streamlit as st
 
-st.title('🎈 App Name')
+st.title(' 🩺 Medical VQA Chatbot')
 
-st.write('Hello world!')
+st.write('This is your health, so it's important!')
