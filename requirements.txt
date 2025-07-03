@@ -3,3 +3,4 @@ torch
 transformers
 Pillow
 accelerate
+sentencepiece
