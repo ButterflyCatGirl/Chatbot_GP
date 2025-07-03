@@ -5,6 +5,6 @@ transformers
 Pillow
 accelerate
 sentencepiece
-streamlit
+streamlit==1.35.0
 protobuf
 
