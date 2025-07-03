@@ -401,7 +401,7 @@ def main():
                 try:
                     # Display image
                     image = Image.open(uploaded_file)
-                    st.image(image, caption=f"Uploaded: {uploaded_file.name}", use_column_width=True)
+                    st.image(image, caption=f"Uploaded: {uploaded_file.name}", use_container_width=True)
                     
                     # Show image info
                     st.info(f"📊 Image size: {image.size[0]}×{image.size[1]} pixels | Format: {image.format}")
