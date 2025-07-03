@@ -1,26 +1,36 @@
 import os
+import sys
 import subprocess
-
-# Install dependencies directly
-dependencies = [
-    "torch==2.3.0",
-    "torchvision==0.18.0",
-    "transformers==4.41.2",
-    "Pillow==10.3.0",
-    "accelerate==0.31.0",
-    "sentencepiece==0.2.0",
-    "protobuf==3.20.3"
-]
-
-for package in dependencies:
-    try:
-        __import__(package.split('==')[0])
-    except ImportError:
-        subprocess.check_call(["pip", "install", package])
-
-# Now the rest of your imports
 import streamlit as st
 from PIL import Image
+import logging
+import time
+
+# --- Dependency Installation ---
+def install_dependencies():
+    """Install required packages if missing"""
+    required = {
+        "torch": "2.3.0",
+        "torchvision": "0.18.0",
+        "transformers": "4.41.2",
+        "Pillow": "10.3.0",
+        "accelerate": "0.31.0",
+        "sentencepiece": "0.2.0",
+        "protobuf": "3.20.3"
+    }
+    
+    for lib, version in required.items():
+        try:
+            __import__(lib)
+            st.sidebar.success(f"{lib} already installed")
+        except ImportError:
+            st.sidebar.warning(f"Installing {lib}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", f"{lib}=={version}"])
+
+# Run dependency check at start
+install_dependencies()
+
+# Now import the rest of the libraries
 import torch
 from transformers import (
     BlipProcessor, 
@@ -28,8 +38,7 @@ from transformers import (
     MarianTokenizer,
     MarianMTModel
 )
-import logging
-import time
+
 
 
 # Setup logging
