@@ -18,7 +18,7 @@ for package in dependencies:
     except ImportError:
         subprocess.check_call(["pip", "install", package])
 
-
+# Now the rest of your imports
 import streamlit as st
 from PIL import Image
 import torch
@@ -30,6 +30,7 @@ from transformers import (
 )
 import logging
 import time
+
 
 # Setup logging
 logging.basicConfig(level=logging.ERROR)
