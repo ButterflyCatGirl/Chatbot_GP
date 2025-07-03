@@ -1,3 +1,24 @@
+import os
+import subprocess
+
+# Install dependencies directly
+dependencies = [
+    "torch==2.3.0",
+    "torchvision==0.18.0",
+    "transformers==4.41.2",
+    "Pillow==10.3.0",
+    "accelerate==0.31.0",
+    "sentencepiece==0.2.0",
+    "protobuf==3.20.3"
+]
+
+for package in dependencies:
+    try:
+        __import__(package.split('==')[0])
+    except ImportError:
+        subprocess.check_call(["pip", "install", package])
+
+
 import streamlit as st
 from PIL import Image
 import torch
