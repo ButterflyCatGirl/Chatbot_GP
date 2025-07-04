@@ -8,12 +8,6 @@ import requests
 import json
 import time
 import gc
-try:
-    import psutil
-    PSUTIL_AVAILABLE = True
-except ImportError:
-    PSUTIL_AVAILABLE = False
-    st.warning("psutil not available. Memory monitoring disabled.")
 
 # Configure page
 st.set_page_config(
