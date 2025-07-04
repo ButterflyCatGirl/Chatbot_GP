@@ -12,6 +12,8 @@ import time
 import gc
 import psutil
 import os
+import sentencepiece
+
 
 
 # Setup logging
