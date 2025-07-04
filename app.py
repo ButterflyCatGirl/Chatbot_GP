@@ -10,8 +10,9 @@ from transformers import (
 import logging
 import time
 import gc
-#import psutil
+import psutil
 import os
+
 
 # Setup logging
 logging.basicConfig(level=logging.ERROR)
