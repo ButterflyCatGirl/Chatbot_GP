@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
@@ -8,6 +9,12 @@ import requests
 import json
 import time
 import gc
+import re
+import random
+import psutil  # Add missing imports [[1]]
+
+# Define PSUTIL_AVAILABLE
+PSUTIL_AVAILABLE = True  # Required for memory monitoring [[2]]
 
 # Configure page
 st.set_page_config(
@@ -56,78 +63,83 @@ ENGLISH_RESPONSES = [
 class MemoryManager:
     @staticmethod
     def clear_cache():
+        """Clear memory cache"""
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
     
     @staticmethod
     def get_memory_info():
+        """Get system memory information"""
         if not PSUTIL_AVAILABLE:
-            return "Memory info unavailable"
-        
-        memory = psutil.virtual_memory()
-        return f"Memory: {memory.percent}% used"
+            return "MemoryWarning: Memory info unavailable"
+        try:
+            memory = psutil.virtual_memory()
+            return f"Memory: {memory.percent}% used"
+        except Exception:
+            return "MemoryWarning: Failed to get memory info"
 
 @st.cache_resource
 def load_model():
-    """Load and cache the BLIP model"""
+    """Load and cache the BLIP model with error handling"""
     try:
         with st.spinner("🔄 Loading AI model... | جاري تحميل النموذج الذكي..."):
             processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
             model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large")
-            
-            # Move to GPU if available
             device = "cuda" if torch.cuda.is_available() else "cpu"
             model = model.to(device)
-            
             return processor, model, device
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
+        st.error(f"ModelError: {str(e)}")
         return None, None, "cpu"
 
 def detect_language(text):
     """Detect if text contains Arabic characters"""
     arabic_pattern = r'[\u0600-\u06FF]'
-    import re
     return 'ar' if re.search(arabic_pattern, text) else 'en'
 
 def optimize_image(image, max_size=(800, 800), quality=85):
-    """Optimize image for processing"""
-    # Convert to RGB if necessary
-    if image.mode in ('RGBA', 'LA', 'P'):
-        background = Image.new('RGB', image.size, (255, 255, 255))
-        if image.mode == 'P':
-            image = image.convert('RGBA')
-        background.paste(image, mask=image.split()[-1] if 'A' in image.mode else None)
-        image = background
-    
-    # Resize if too large
-    if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
-        image.thumbnail(max_size, Image.Resampling.LANCZOS)
-    
-    return image
+    """Optimize image for processing with enhanced error handling"""
+    try:
+        # Convert to RGB if necessary
+        if image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if 'A' in image.mode else None)
+            image = background
+            
+        # Resize if too large
+        if image.size[0] > max_size[0] or image.size[1] > max_size[1]:
+            image.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+        return image
+    except Exception as e:
+        st.error(f"ImageOptimizationError: {str(e)}")
+        return None
 
 def analyze_image(image, user_question="", language="en"):
-    """Analyze image using BLIP model"""
+    """Analyze image using BLIP model with enhanced error handling"""
     processor, model, device = load_model()
-    
     if model is None:
         return "❌ Model loading failed | فشل في تحميل النموذج"
     
     try:
         # Optimize image
         optimized_image = optimize_image(image)
-        
+        if optimized_image is None:
+            return "❌ Image optimization failed | فشل في تحسين الصورة"
+            
         # Generate medical-focused prompt
         if language == 'ar':
             medical_prompt = "وصف طبي مفصل لهذة الصورة:"
         else:
             medical_prompt = "detailed medical description of this image:"
-        
+            
         # Process image
         inputs = processor(optimized_image, medical_prompt, return_tensors="pt").to(device)
         
-        # Generate description
+        # Generate description with memory management
         with torch.no_grad():
             out = model.generate(
                 **inputs,
@@ -137,28 +149,27 @@ def analyze_image(image, user_question="", language="en"):
                 do_sample=True,
                 early_stopping=True
             )
-        
         description = processor.decode(out[0], skip_special_tokens=True)
-        
-        # Remove the prompt from the description
-        if medical_prompt in description:
-            description = description.replace(medical_prompt, "").strip()
         
         # Clean up memory
         MemoryManager.clear_cache()
         
         # Generate contextual response
         if language == 'ar':
-            import random
             response_template = random.choice(ARABIC_RESPONSES)
             return response_template.format(description=description)
         else:
-            import random
             response_template = random.choice(ENGLISH_RESPONSES)
             return response_template.format(description=description)
             
+    except torch.cuda.OutOfMemoryError:
+        MemoryManager.clear_cache()
+        error_msg = "GPUMemoryError: Out of GPU memory. Please try again with a smaller image."
+        if language == 'ar':
+            return f"❌ نفذت الذاكرة الخاصة بالمعالج الرسومي (GPU). جرب مرة أخرى بصورة أصغر."
+        return f"❌ {error_msg}"
     except Exception as e:
-        error_msg = f"Error analyzing image: {str(e)}"
+        error_msg = f"ImageAnalysisError: {str(e)}"
         if language == 'ar':
             return f"❌ حدث خطأ في تحليل الصورة: {error_msg}"
         return f"❌ {error_msg}"
@@ -173,29 +184,24 @@ def main():
     # Sidebar
     with st.sidebar:
         st.markdown("### 🇪🇬 اللغة | Language")
-        
         # Language selector
         language_options = {
             "🇪🇬 العربية (مصر)": "ar",
             "🇺🇸 English (US)": "en"
         }
-        
         selected_lang = st.selectbox(
-            "Choose Language:",
+            "Choose Language:" if st.session_state.language == 'en' else "اختر اللغة:",
             options=list(language_options.keys()),
-            index=0 if st.session_state.language == 'ar' else 1
+            index=1 if st.session_state.language == 'en' else 0
         )
         st.session_state.language = language_options[selected_lang]
-        
         st.markdown("---")
         
         # System info
         if PSUTIL_AVAILABLE:
             st.markdown(f"**System:** {MemoryManager.get_memory_info()}")
-        
         device_info = "🔥 GPU" if torch.cuda.is_available() else "💻 CPU"
         st.markdown(f"**Device:** {device_info}")
-        
         st.markdown("---")
         
         # Clear chat button
@@ -220,9 +226,7 @@ def main():
     else:
         st.markdown("""
         # 🏥 Egyptian AI Medical Assistant
-        
         An intelligent assistant for medical image analysis using advanced AI technology.
-        
         **Disclaimer:** This application is for educational purposes only and is not a substitute for professional medical consultation.
         """)
 
@@ -258,7 +262,6 @@ def main():
         try:
             # Load and display image
             image = Image.open(uploaded_file)
-            
             # Add user message with image
             user_msg = {
                 "role": "user",
@@ -266,63 +269,50 @@ def main():
                 "image": image
             }
             st.session_state.messages.append(user_msg)
-            
             # Display user message
             with st.chat_message("user"):
                 st.image(image, width=300)
                 st.markdown(user_msg["content"])
-            
             # Analyze image
             with st.chat_message("assistant"):
                 with st.spinner("🔍 Analyzing image... | جاري تحليل الصورة..."):
                     analysis = analyze_image(image, "", st.session_state.language)
                     st.markdown(analysis)
-                    
                     # Add assistant response
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": analysis
                     })
-            
         except Exception as e:
-            st.error(f"Error processing image: {str(e)}")
+            st.error(f"ImageProcessingError: {str(e)}")
 
     # Process text question
     if user_question:
         # Detect language of the question
         detected_lang = detect_language(user_question)
-        
         # Add user message
         st.session_state.messages.append({
             "role": "user", 
             "content": user_question
         })
-        
         # Display user message
         with st.chat_message("user"):
             st.markdown(user_question)
-        
         # Generate response
         with st.chat_message("assistant"):
             if detected_lang == 'ar':
                 response = """
                 شكراً لسؤالك. أنا مساعد طبي ذكي متخصص في تحليل الصور الطبية. 
-                
                 لأقدر أساعدك بشكل أفضل، ارفع صورة طبية وأنا هحللها ليك وأديك معلومات مفيدة.
-                
                 **تذكر:** هذا التحليل للمعلومات العامة فقط وليس بديل عن زيارة الطبيب.
                 """
             else:
                 response = """
                 Thank you for your question. I'm an AI medical assistant specialized in medical image analysis.
-                
                 To help you better, please upload a medical image and I'll analyze it for you and provide useful information.
-                
                 **Remember:** This analysis is for general information only and is not a substitute for visiting a doctor.
                 """
-            
             st.markdown(response)
-            
             # Add assistant response
             st.session_state.messages.append({
                 "role": "assistant",
