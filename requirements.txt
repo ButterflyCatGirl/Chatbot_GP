@@ -1,9 +1,8 @@
-
 streamlit
 torch
-torchvision  # Required for image processing (e.g., PIL compatibility)
+torchvision
 transformers
-accelerate  # Required for device_map usage
-pillow  # Required for PIL image handling
-psutil  # Required for memory monitoring
-sentencepiece  # Required for MarianTokenizer and other subword tokenizers
+accelerate
+sentencepiece  # Required for MarianTokenizer [[1]]
+pillow
+psutil
