@@ -1,6 +1,8 @@
-streamlit>=1.28.0
-torch>=2.0.0
-torchvision>=0.15.0
-transformers>=4.35.0
-Pillow>=9.5.0
-requests>=2.31.0
+
+streamlit
+torch
+torchvision  # Required for image processing (e.g., PIL compatibility)
+transformers
+accelerate  # Required for device_map usage (fixes your error) [[1]]
+pillow  # Required for PIL image handling
+psutil  # Required for memory monitoring
