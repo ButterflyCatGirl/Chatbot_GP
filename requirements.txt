@@ -1,5 +1,5 @@
 streamlit==1.24.0
-torch==2.0.0
-transformers==4.30.0
+# Use a version-specific PyTorch wheel for compatibility
+torch==2.0.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html transformers==4.30.0
 pillow==9.5.0
 psutil==5.9.5
