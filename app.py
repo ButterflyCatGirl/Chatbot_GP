@@ -149,23 +149,23 @@ class MedicalVQASystem:
             "normal": "طبيعي",
             "abnormal": "غير طبيعي",
             "brain": "الدماغ",
-            "heart": "القلب",
-            "lung": "الرئة",
             "fracture": "كسر",
+            "no abnormality detected": "لا توجد شذوذات",
+            "left lung": "الرئة اليسرى",
+            "right lung": "الرئة اليمنى",
             "pneumonia": "التهاب رئوي",
             "tumor": "ورم",
             "cancer": "سرطان",
             "infection": "عدوى",
+            "heart": "القلب",
             "liver": "الكبد",
             "kidney": "الكلى",
             "bone": "العظم",
-            "blood": "دم",
+            "blood vessel": "وعاء دموي",
             "artery": "شريان",
             "vein": "وريد",
             "benign": "حميد",
-            "malignant": "خبيث",
-            "healthy": "صحي",
-            "disease": "مرض"
+            "malignant": "خبيث"
         }
         
         answer_lower = answer_en.lower()
