@@ -14,7 +14,15 @@ This is a CHATBOT App for my graduation project...
 
 ## Section Heading
 
-This is filler text, please replace this with text for this section.
+---
+title: Medical VQA Chatbot
+emoji: 🩺
+colorFrom: blue
+colorTo: indigo
+sdk: streamlit
+app_file: app.py
+pinned: false
+---
 
 ## Further Reading
 
