@@ -261,7 +261,7 @@ def get_vqa_system():
 def init_streamlit_config():
     """Initialize Streamlit configuration"""
     st.set_page_config(
-        page_title="🩺 Medical AI Assistant",
+        page_title="Medical AI Assistant",
         layout="wide",
         page_icon="🩺",
         initial_sidebar_state="expanded"
