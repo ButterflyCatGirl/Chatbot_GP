@@ -6,9 +6,7 @@ from transformers import (
     BlipProcessor, 
     BlipForQuestionAnswering,
     MarianTokenizer,
-    MarianMTModel,
-    Blip2Processor,
-    Blip2ForConditionalGeneration
+    MarianMTModel
 )
 import logging
 import time
@@ -65,18 +63,16 @@ class MedicalVQASystem:
             self._clear_memory()
             
             # Load BLIP processor
-            self.processor = Blip2Processor.from_pretrained("Salesforce/blip2-flan-t5-xl")
+            self.processor = BlipProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
             logger.info("BLIP processor loaded successfully")
             
             # Try to load custom model first, fallback to base model
             model_names = [
-                "Mohamed264/llava-medical-VQA-lora-merged2"
-                "Salesforce/blip-vqa-base"
-                "Salesforce/blip2-flan-t5-xl"
                 "Salesforce/blip2-opt-2.7b"
+                "Salesforce/blip2-flan-t5-xl"
                 "llava-hf/llava-1.5-7b-hf"
                 "ButterflyCatGirl/Blip-Streamlit-chatbot",
-                "sharawy53/diploma"
+                "Salesforce/blip-vqa-base"
             ]
             
             for model_name in model_names:
@@ -106,7 +102,6 @@ class MedicalVQASystem:
             try:
                 self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
                 self.ar_en_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
-                
                 self.en_ar_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
                 self.en_ar_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
                 logger.info("Translation models loaded successfully")
@@ -173,7 +168,7 @@ class MedicalVQASystem:
             "artery": "شريان",
             "vein": "وريد",
             "benign": "حميد",
-            "malignant": "خبيث",
+            "malignant": "خبيث"
             "pneumothorax": "انفجار الرئة",
             "cardiomegaly": "تكبر القلب",
             "atelectasis": "انخماص الرئة",
@@ -183,14 +178,12 @@ class MedicalVQASystem:
             "hemorrhage": "نزيف",
             "edema": "ورم",
             "calcification": "تكلس",
+            # Common anatomical terms
             "left ventricle": "البطين الأيسر",
             "right atrium": "ال Auricle الأيمن",
             "aorta": "الشريان الأورطي",
-            "pulmonary artery": "الشريان الرئوي",
-            "hip dislocation": "خلع مفصل الورك",
-            "femoral neck fracture": "كسر عنق الفخذ",
-            "hip joint": "مفصل الورك",
-            "pelvis": "الحوض",
+            "pulmonary artery": "الشريان الرئوي"
+
         }
         
         answer_lower = answer_en.lower()
@@ -202,67 +195,81 @@ class MedicalVQASystem:
         
         # Use general translation for the rest
         return self._translate_text(answer_en, "en", "ar")
-
     
+    def _preprocess_image(self, image: Image.Image) -> Image.Image:
+        """Preprocess image for optimal performance"""
+        try:
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Resize if too large
+            if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
+                image = ImageOps.fit(image, MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
+            
+            return image
+        except Exception as e:
+            logger.error(f"Image preprocessing failed: {str(e)}")
+            raise
+    
+    def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
+        """Process medical VQA query"""
+        try:
+            # Preprocess image
+            image = self._preprocess_image(image)
+            
+            # Detect language and prepare translations
+            detected_lang = self._detect_language(question)
+            
+            if detected_lang == "ar":
+                question_ar = question.strip()
+                question_en = self._translate_text(question_ar, "ar", "en")
+            else:
+                question_en = question.strip()
+                question_ar = self._translate_text(question_en, "en", "ar")
+            
+            # Process with BLIP model
+            inputs = self.processor(image, question_en, return_tensors="pt")
+            
+            # Move inputs to device
+            if self.device != "cpu":
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            
+            # Generate answer
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_length=50,
+                    num_beams=4,
+                    early_stopping=True,
+                    do_sample=False
+                )
+            
+            # Decode answer
+            answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+            
+            # Get Arabic translation
+            if detected_lang == "ar":
+                answer_ar = self._get_medical_translation(answer_en)
+            else:
+                answer_ar = self._translate_text(answer_en, "en", "ar")
+            
+            return {
+                "question_en": question_en,
+                "question_ar": question_ar,
+                "answer_en": answer_en,
+                "answer_ar": answer_ar,
+                "detected_language": detected_lang,
+                "success": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Query processing failed: {str(e)}")
+            return {
+                "error": str(e),
+                "success": False
+            }
 
-        def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
-            """Process medical VQA query"""
-            try:
-                # Preprocess image
-                image = self._preprocess_image(image)
-            
-                # Detect language and prepare translations
-                detected_lang = self._detect_language(question)
-            
-                if detected_lang == "ar":
-                    question_ar = question.strip()
-                    question_en = self._translate_text(question_ar, "ar", "en")
-                else:
-                    question_en = question.strip()
-                    question_ar = self._translate_text(question_en, "en", "ar")
-            
-                # Process with BLIP model
-                inputs = self.processor(image, question_en, return_tensors="pt")
-            
-                # Move inputs to device
-                if self.device != "cpu":
-                    inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            
-                # Generate answer
-                with torch.no_grad():
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_length=50,
-                        num_beams=4,
-                        early_stopping=True,
-                        do_sample=False
-                    )
-            
-                # Decode answer
-                answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
-            
-                # Get Arabic translation
-                if detected_lang == "ar":
-                    answer_ar = self._get_medical_translation(answer_en)
-                else:
-                    answer_ar = self._translate_text(answer_en, "en", "ar")
-            
-                return {
-                    "question_en": question_en,
-                    "question_ar": question_ar,
-                    "answer_en": answer_en,
-                    "answer_ar": answer_ar,
-                    "detected_language": detected_lang,
-                    "success": True
-                }
-            
-            except Exception as e:
-                logger.error(f"Query processing failed: {str(e)}")
-                return {
-                    "error": str(e),
-                    "success": False
-                }
-            
 # Initialize the VQA system
 @st.cache_resource(show_spinner=False)
 def get_vqa_system():
@@ -508,7 +515,7 @@ def main():
         
         **Supported Languages:**
         - English 🇺🇸
-        - Arabic 🇪🇬
+        - Arabic 🇸🇦
         
         **Supported Image Formats:**
         - JPG, JPEG, PNG, BMP, TIFF
