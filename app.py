@@ -100,8 +100,8 @@ class MedicalVQASystem:
             
             # Load translation models
             try:
-                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("UBC-NLP/ara-eng-news")
-                self.ar_en_model = MarianMTModel.from_pretrained("UBC-NLP/ara-eng-news")
+                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
+                self.ar_en_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
                 
                 self.en_ar_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
                 self.en_ar_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
