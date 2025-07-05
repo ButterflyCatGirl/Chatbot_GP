@@ -204,22 +204,7 @@ class MedicalVQASystem:
         return self._translate_text(answer_en, "en", "ar")
 
     
-       def _preprocess_image(self, image: Image.Image) -> Image.Image:
-        """Preprocess image for optimal performance"""
-        try:
-            # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            # Resize if too large
-            if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
-                image = ImageOps.fit(image, MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
-            
-            return image
-        except Exception as e:
-            logger.error(f"Image preprocessing failed: {str(e)}")
-            raise
-    
+
         def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
             """Process medical VQA query"""
             try:
