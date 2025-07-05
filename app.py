@@ -221,9 +221,9 @@ class MedicalVQASystem:
                 image = image.resize((target_size["width"], target_size["height"]), Image.Resampling.LANCZOS)
         
             return image
-    except Exception as e:
-        logger.error(f"Image preprocessing failed: {str(e)}")
-        raise
+        except Exception as e:
+            logger.error(f"Image preprocessing failed: {str(e)}")
+            raise
         
 
     
