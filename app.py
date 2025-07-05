@@ -248,8 +248,7 @@ class MedicalVQASystem:
             inputs = self.processor(
             images=image,
             text=question_en,
-            return_tensors="pt",
-            size={"height": 224, "width": 224}  # بدل shortest_edge
+            return_tensors="pt"
             )
 
             # Move inputs to device
