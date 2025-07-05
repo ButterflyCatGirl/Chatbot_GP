@@ -100,8 +100,9 @@ class MedicalVQASystem:
             
             # Load translation models
             try:
-                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
-                self.ar_en_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
+                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("UBC-NLP/ara-eng-news")
+                self.ar_en_model = MarianMTModel.from_pretrained("UBC-NLP/ara-eng-news")
+                
                 self.en_ar_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
                 self.en_ar_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
                 logger.info("Translation models loaded successfully")
@@ -168,7 +169,7 @@ class MedicalVQASystem:
             "artery": "شريان",
             "vein": "وريد",
             "benign": "حميد",
-            "malignant": "خبيث"
+            "malignant": "خبيث",
             "pneumothorax": "انفجار الرئة",
             "cardiomegaly": "تكبر القلب",
             "atelectasis": "انخماص الرئة",
