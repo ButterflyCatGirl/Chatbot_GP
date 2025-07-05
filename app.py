@@ -523,7 +523,7 @@ def main():
                                 st.markdown(f"**Answer:** {result['answer_en']}")
                             
                             with res_col2:
-                                st.markdown("**🇸🇦 النتائج بالعربية**")
+                                st.markdown("**🇪🇬 النتائج بالعربية**")
                                 st.markdown(f"**السؤال:** <div class='rtl'>{result['question_ar']}</div>", unsafe_allow_html=True)
                                 st.markdown(f"**الإجابة:** <div class='rtl'>{result['answer_ar']}</div>", unsafe_allow_html=True)
                             
