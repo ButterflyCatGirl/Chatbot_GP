@@ -209,6 +209,7 @@ class MedicalVQASystem:
             if image.mode != 'RGB':
                 image = image.convert('RGB')
         
+            # Resize to 224x224 as expected by most BLIP models
             image = ImageOps.fit(image, (224, 224), Image.Resampling.LANCZOS)
         
             return image
