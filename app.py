@@ -234,8 +234,14 @@ class MedicalVQASystem:
                 question_ar = self._translate_text(question_en, "en", "ar")
             
             # Process with BLIP model
-            inputs = self.processor(image, question_en, return_tensors="pt")
-            
+            #inputs = self.processor(image, question_en, return_tensors="pt")
+            inputs = self.processor(
+            images=image,
+            text=question_en,
+            return_tensors="pt",
+            size={"height": 224, "width": 224}  # بدل shortest_edge
+            )
+
             # Move inputs to device
             if self.device != "cpu":
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
