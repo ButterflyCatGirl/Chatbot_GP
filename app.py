@@ -204,26 +204,19 @@ class MedicalVQASystem:
         return self._translate_text(answer_en, "en", "ar")
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
-        """Preprocess image with explicit sizing"""
+        """Preprocess image for optimal performance"""
         try:
-            # Convert to RGB if necessary
             if image.mode != 'RGB':
                 image = image.convert('RGB')
         
-            # Explicitly define size with height and width
-                target_size = {
-                "height": MAX_IMAGE_SIZE[0],
-                "width": MAX_IMAGE_SIZE[1]
-                }
-        
-            # Resize if too large
-            if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
-                image = image.resize((target_size["width"], target_size["height"]), Image.Resampling.LANCZOS)
+            # Resize to standard BLIP input size (224x224)
+            image = ImageOps.fit(image, (224, 224), Image.Resampling.LANCZOS)
         
             return image
         except Exception as e:
             logger.error(f"Image preprocessing failed: {str(e)}")
             raise
+
         
 
     
