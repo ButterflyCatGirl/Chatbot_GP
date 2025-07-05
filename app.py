@@ -252,7 +252,7 @@ class MedicalVQASystem:
             # Decode answer
             answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
             if not answer_en or not any(char.isalpha() for char in answer_en):
-            answer_en = "Unable to determine the diagnosis from the image."
+                answer_en = "Unable to determine the diagnosis from the image."
             
             # Get Arabic translation
             if detected_lang == "ar":
