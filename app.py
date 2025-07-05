@@ -517,7 +517,7 @@ def main():
         
         **Supported Languages:**
         - English 🇺🇸
-        - Arabic 🇸🇦
+        - Arabic 🇪🇬
         
         **Supported Image Formats:**
         - JPG, JPEG, PNG, BMP, TIFF
