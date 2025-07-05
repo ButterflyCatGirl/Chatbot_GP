@@ -6,7 +6,9 @@ from transformers import (
     BlipProcessor, 
     BlipForQuestionAnswering,
     MarianTokenizer,
-    MarianMTModel
+    MarianMTModel,
+    Blip2Processor,
+    Blip2ForConditionalGeneration
 )
 import logging
 import time
@@ -63,7 +65,7 @@ class MedicalVQASystem:
             self._clear_memory()
             
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("Mohamed264/llava-medical-VQA-lora-merged2")
+            self.processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
             logger.info("BLIP processor loaded successfully")
             
             # Try to load custom model first, fallback to base model
@@ -200,22 +202,30 @@ class MedicalVQASystem:
         
         # Use general translation for the rest
         return self._translate_text(answer_en, "en", "ar")
-    
+
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
-        """Preprocess image for optimal performance"""
-        try:
-            # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            # Resize if too large
-            if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
-                image = ImageOps.fit(image, MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
-            
-            return image
-        except Exception as e:
-            logger.error(f"Image preprocessing failed: {str(e)}")
-            raise
+    """Preprocess image with explicit sizing"""
+    try:
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Explicitly define size with height and width
+        target_size = {
+            "height": MAX_IMAGE_SIZE[0],
+            "width": MAX_IMAGE_SIZE[1]
+        }
+        
+        # Resize if too large
+        if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
+            image = image.resize((target_size["width"], target_size["height"]), Image.Resampling.LANCZOS)
+        
+        return image
+    except Exception as e:
+        logger.error(f"Image preprocessing failed: {str(e)}")
+        raise
+        
+
     
     def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
         """Process medical VQA query"""
