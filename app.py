@@ -211,14 +211,14 @@ class MedicalVQASystem:
                 image = image.convert('RGB')
         
             # Explicitly define size with height and width
-            target_size = {
-            "height": MAX_IMAGE_SIZE[0],
-            "width": MAX_IMAGE_SIZE[1]
-        }
+                target_size = {
+                "height": MAX_IMAGE_SIZE[0],
+                "width": MAX_IMAGE_SIZE[1]
+                }
         
-        # Resize if too large
-        if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
-            image = image.resize((target_size["width"], target_size["height"]), Image.Resampling.LANCZOS)
+            # Resize if too large
+            if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
+                image = image.resize((target_size["width"], target_size["height"]), Image.Resampling.LANCZOS)
         
         return image
     except Exception as e:
