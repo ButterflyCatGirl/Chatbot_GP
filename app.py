@@ -123,7 +123,7 @@ class MedicalVQASystem:
     
     for pattern in invalid_sequences:
         if re.search(pattern, text):
-            return False
+        return False
             
     # Check for logical word order
     medical_verbs = ["تشخيص", "تحليل", "تصوير"]
