@@ -204,14 +204,14 @@ class MedicalVQASystem:
         return self._translate_text(answer_en, "en", "ar")
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
-    """Preprocess image with explicit sizing"""
-    try:
-        # Convert to RGB if necessary
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        """Preprocess image with explicit sizing"""
+        try:
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
         
-        # Explicitly define size with height and width
-        target_size = {
+            # Explicitly define size with height and width
+            target_size = {
             "height": MAX_IMAGE_SIZE[0],
             "width": MAX_IMAGE_SIZE[1]
         }
