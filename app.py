@@ -68,12 +68,12 @@ class MedicalVQASystem:
             
             # Try to load custom model first, fallback to base model
             model_names = [
-                "sharawy53/diploma"
-                "Salesforce/blip2-opt-2.7b"
+                "Salesforce/blip-vqa-base"
                 "Salesforce/blip2-flan-t5-xl"
+                "Salesforce/blip2-opt-2.7b"
                 "llava-hf/llava-1.5-7b-hf"
                 "ButterflyCatGirl/Blip-Streamlit-chatbot",
-                "Salesforce/blip-vqa-base"
+                "sharawy53/diploma"
             ]
             
             for model_name in model_names:
