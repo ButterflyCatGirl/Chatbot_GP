@@ -125,10 +125,10 @@ class MedicalVQASystem:
 
     def _validate_arabic_translation(self, text: str) -> bool:
     # Check for invalid character sequences
-    invalid_sequences = [
+        invalid_sequences = [
         r'[\u064B-\u0652][\u064B-\u0652]',  # Multiple diacritics
         r'[\u0670][\u0670]'                # Multiple superscript alif
-    ]
+        ]
     
     for pattern in invalid_sequences:
         if re.search(pattern, text):
