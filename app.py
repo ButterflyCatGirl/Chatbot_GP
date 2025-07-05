@@ -220,7 +220,7 @@ class MedicalVQASystem:
             if image.size[0] > MAX_IMAGE_SIZE[0] or image.size[1] > MAX_IMAGE_SIZE[1]:
                 image = image.resize((target_size["width"], target_size["height"]), Image.Resampling.LANCZOS)
         
-        return image
+            return image
     except Exception as e:
         logger.error(f"Image preprocessing failed: {str(e)}")
         raise
