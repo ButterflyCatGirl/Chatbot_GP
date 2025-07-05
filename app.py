@@ -63,11 +63,12 @@ class MedicalVQASystem:
             self._clear_memory()
             
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/Blip-Streamlit-chatbot")
+            self.processor = BlipProcessor.from_pretrained("llava-hf/llava-1.5-7b-hf")
             logger.info("BLIP processor loaded successfully")
             
             # Try to load custom model first, fallback to base model
             model_names = [
+                "llava-hf/llava-1.5-7b-hf"
                 "ButterflyCatGirl/Blip-Streamlit-chatbot",
                 "Salesforce/blip-vqa-base"
             ]
