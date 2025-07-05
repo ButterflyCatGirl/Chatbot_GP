@@ -124,7 +124,6 @@ class MedicalVQASystem:
 
 
     def _validate_arabic_translation(self, text: str) -> bool:
-    """Check for common Arabic text display issues [[3]]( https://www.pactranz.com/blog/arabic-translation-display-problems )"""
     # Check for invalid character sequences
     invalid_sequences = [
         r'[\u064B-\u0652][\u064B-\u0652]',  # Multiple diacritics
