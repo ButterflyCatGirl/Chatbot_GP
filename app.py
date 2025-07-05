@@ -120,15 +120,6 @@ class MedicalVQASystem:
             logger.error(f"Model loading failed: {str(e)}")
             return False
 
-        
-
-
-    def _validate_arabic_translation(self, text: str) -> bool:
-    # Check for invalid character sequences
-        invalid_sequences = [
-        r'[\u064B-\u0652][\u064B-\u0652]',  # Multiple diacritics
-        r'[\u0670][\u0670]'                # Multiple superscript alif
-        ]
     
     for pattern in invalid_sequences:
         if re.search(pattern, text):
@@ -141,6 +132,14 @@ class MedicalVQASystem:
             return False
             
     return True
+    
+    def _validate_arabic_translation(self, text: str) -> bool:
+    """Check for common Arabic text display issues"""
+    # Check for invalid character sequences ← Indented comment
+    invalid_sequences = [  # ← Properly indented
+        r'[\u064B-\u0652][\u064B-\u0652]',  # Multiple diacritics
+        r'[\u0670][\u0670]'  # Multiple superscript alif
+    ]
     
     def _detect_language(self, text: str) -> str:
         """Detect if text is Arabic or English"""
