@@ -63,7 +63,7 @@ class MedicalVQASystem:
             self._clear_memory()
             
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
+            self.processor = BlipProcessor.from_pretrained("Salesforce/blip2-flan-t5-xl")
             logger.info("BLIP processor loaded successfully")
             
             # Try to load custom model first, fallback to base model
@@ -180,12 +180,14 @@ class MedicalVQASystem:
             "hemorrhage": "نزيف",
             "edema": "ورم",
             "calcification": "تكلس",
-            # Common anatomical terms
             "left ventricle": "البطين الأيسر",
             "right atrium": "ال Auricle الأيمن",
             "aorta": "الشريان الأورطي",
             "pulmonary artery": "الشريان الرئوي"
-
+            "hip dislocation": "خلع مفصل الورك",
+            "femoral neck fracture": "كسر عنق الفخذ",
+            "hip joint": "مفصل الورك",
+            "pelvis": "الحوض",
         }
         
         answer_lower = answer_en.lower()
@@ -249,6 +251,8 @@ class MedicalVQASystem:
             
             # Decode answer
             answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+            if not answer_en or not any(char.isalpha() for char in answer_en):
+            answer_en = "Unable to determine the diagnosis from the image."
             
             # Get Arabic translation
             if detected_lang == "ar":
