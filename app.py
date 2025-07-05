@@ -183,7 +183,7 @@ class MedicalVQASystem:
             "left ventricle": "البطين الأيسر",
             "right atrium": "ال Auricle الأيمن",
             "aorta": "الشريان الأورطي",
-            "pulmonary artery": "الشريان الرئوي"
+            "pulmonary artery": "الشريان الرئوي",
             "hip dislocation": "خلع مفصل الورك",
             "femoral neck fracture": "كسر عنق الفخذ",
             "hip joint": "مفصل الورك",
