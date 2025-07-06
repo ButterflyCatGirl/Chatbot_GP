@@ -64,6 +64,7 @@ class MedicalVQASystem:
 
             # Load BLIP2 processor and model (FIXED)
             model_names = [
+                "Salesforce/blip-vqa-base"
                 "Salesforce/blip2-flan-t5-xl",
                 "Salesforce/blip2-opt-2.7b",
                 "Salesforce/blip2-flan-t5-base"
