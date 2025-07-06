@@ -141,45 +141,105 @@ class MedicalVQASystem:
 
         return text  # Return original if translation fails
 
-    def _get_medical_translation(self, answer_en: str) -> str:
-        """Get medical-specific translation for common terms"""
-        medical_terms = {
-            "chest x-ray": "أشعة سينية للصدر",
-            "x-ray": "أشعة سينية",
-            "ct scan": "تصوير مقطعي محوسب",
-            "mri": "تصوير بالرنين المغناطيسي",
-            "ultrasound": "تصوير بالموجات فوق الصوتية",
-            "normal": "طبيعي",
-            "abnormal": "غير طبيعي",
-            "brain": "الدماغ",
-            "heart": "القلب",
-            "lung": "الرئة",
-            "fracture": "كسر",
-            "pneumonia": "التهاب رئوي",
-            "tumor": "ورم",
-            "cancer": "سرطان",
-            "infection": "عدوى",
-            "liver": "الكبد",
-            "kidney": "الكلى",
-            "bone": "العظم",
-            "blood": "دم",
-            "artery": "شريان",
-            "vein": "وريد",
-            "benign": "حميد",
-            "malignant": "خبيث",
-            "healthy": "صحي",
-            "disease": "مرض"
+def _get_medical_translation(self, answer_en: str) -> str:
+    """Get medical-specific translation for common terms"""
+    medical_terms = {
+        # Basic medical terms
+        "chest": "صدر", "x-ray": "أشعة سينية", "ct scan": "أشعة مقطعية", 
+        "mri": "رنين مغناطيسي", "ultrasound": "موجات فوق صوتية",
+        "normal": "طبيعي", "abnormal": "غير طبيعي", "healthy": "صحي",
+        
+        # Body parts
+        "brain": "دماغ", "heart": "قلب", "lung": "رئة", "liver": "كبد", 
+        "kidney": "كلى", "bone": "عظم", "eye": "عين", "eyes": "عيون",
+        
+        # Medical conditions  
+        "fracture": "كسر", "pneumonia": "التهاب رئوي", "tumor": "ورم",
+        "infection": "التهاب", "cancer": "سرطان", "disease": "مرض",
+        
+        # Common findings
+        "room": "غرفة", "space": "مساحة", "area": "منطقة",
+        "fluid": "سوائل", "mass": "كتلة", "lesion": "آفة"
+    }
+    
+    # First translate word by word for medical terms
+    translated_parts = []
+    words = answer_en.lower().split()
+    
+    for word in words:
+        # Clean punctuation
+        clean_word = word.strip('.,!?;:')
+        if clean_word in medical_terms:
+            translated_parts.append(medical_terms[clean_word])
+        else:
+            # Use general translation for unknown words
+            translated_word = self._translate_text(clean_word, "en", "ar")
+            translated_parts.append(translated_word)
+    
+    # Join and clean up
+    arabic_response = " ".join(translated_parts)
+    
+    # If translation failed or looks wrong, provide a generic medical response
+    if not arabic_response or arabic_response == answer_en or len(arabic_response) < 3:
+        return "تحتاج هذه الصورة الطبية إلى تقييم من قبل طبيب مختص للحصول على تشخيص دقيق"
+    
+    return arabic_response.strip()
+
+    def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
+    """Process medical VQA query"""
+    try:
+        # Preprocess image
+        image = self._preprocess_image(image)
+
+        # Detect language and prepare translations
+        detected_lang = self._detect_language(question)
+
+        if detected_lang == "ar":
+            question_ar = question.strip()
+            question_en = self._translate_text(question_ar, "ar", "en")
+        else:
+            question_en = question.strip()
+            question_ar = self._translate_text(question_en, "en", "ar")
+
+        # Process with BLIP model using English question
+        inputs = self.processor(image, question_en, return_tensors="pt")
+
+        # Move inputs to device
+        if self.device != "cpu":
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+        # Generate answer
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_length=50,
+                num_beams=4,
+                early_stopping=True,
+                do_sample=False
+            )
+
+        # Decode answer
+        answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+
+        # Get proper Arabic translation
+        answer_ar = self._get_medical_translation(answer_en)
+
+        return {
+            "question_en": question_en,
+            "question_ar": question_ar,
+            "answer_en": answer_en,
+            "answer_ar": answer_ar,
+            "detected_language": detected_lang,
+            "success": True
         }
 
-        answer_lower = answer_en.lower()
+    except Exception as e:
+        logger.error(f"Query processing failed: {str(e)}")
+        return {
+            "error": str(e),
+            "success": False
+        }
 
-        # Check for exact matches first
-        for term, translation in medical_terms.items():
-            if term in answer_lower:
-                answer_en = answer_en.replace(term, translation)
-
-        # Use general translation for the rest
-        return self._translate_text(answer_en, "en", "ar")
 
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
