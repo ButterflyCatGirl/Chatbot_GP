@@ -95,7 +95,6 @@ class MedicalVQASystem:
             if self.model is None:
                 raise Exception("Failed to load any BLIP model")
 
-
             # Load translation models
             try:
                 self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
@@ -107,7 +106,6 @@ class MedicalVQASystem:
                 logger.warning(f"Translation models failed to load: {str(e)}")
                 # Continue without translation - we'll handle this gracefully
 
-
             return True
 
         except Exception as e:
@@ -118,7 +116,6 @@ class MedicalVQASystem:
         """Detect if text is Arabic or English"""
         arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
         return "ar" if arabic_chars > 0 else "en"
-
 
     def _translate_text(self, text: str, source_lang: str, target_lang: str) -> str:
         """Translate text between Arabic and English"""
@@ -141,51 +138,45 @@ class MedicalVQASystem:
 
         return text  # Return original if translation fails
 
-def _get_medical_translation(self, answer_en: str) -> str:
-    """Get medical-specific translation for common terms"""
-    medical_terms = {
-        # Basic medical terms
-        "chest": "صدر", "x-ray": "أشعة سينية", "ct scan": "أشعة مقطعية", 
-        "mri": "رنين مغناطيسي", "ultrasound": "موجات فوق صوتية",
-        "normal": "طبيعي", "abnormal": "غير طبيعي", "healthy": "صحي",
-        
-        # Body parts
-        "brain": "دماغ", "heart": "قلب", "lung": "رئة", "liver": "كبد", 
-        "kidney": "كلى", "bone": "عظم", "eye": "عين", "eyes": "عيون",
-        
-        # Medical conditions  
-        "fracture": "كسر", "pneumonia": "التهاب رئوي", "tumor": "ورم",
-        "infection": "التهاب", "cancer": "سرطان", "disease": "مرض",
-        
-        # Common findings
-        "room": "غرفة", "space": "مساحة", "area": "منطقة",
-        "fluid": "سوائل", "mass": "كتلة", "lesion": "آفة"
-    }
-    
-    # First translate word by word for medical terms
-    translated_parts = []
-    words = answer_en.lower().split()
-    
-    for word in words:
-        # Clean punctuation
-        clean_word = word.strip('.,!?;:')
-        if clean_word in medical_terms:
-            translated_parts.append(medical_terms[clean_word])
-        else:
-            # Use general translation for unknown words
-            translated_word = self._translate_text(clean_word, "en", "ar")
-            translated_parts.append(translated_word)
-    
-    # Join and clean up
-    arabic_response = " ".join(translated_parts)
-    
-    # If translation failed or looks wrong, provide a generic medical response
-    if not arabic_response or arabic_response == answer_en or len(arabic_response) < 3:
-        return "تحتاج هذه الصورة الطبية إلى تقييم من قبل طبيب مختص للحصول على تشخيص دقيق"
-    
-    return arabic_response.strip()
+    def _get_medical_translation(self, answer_en: str) -> str:
+        """Get medical-specific translation for common terms"""
+        medical_terms = {
+            "chest x-ray": "أشعة سينية للصدر",
+            "x-ray": "أشعة سينية",
+            "ct scan": "تصوير مقطعي محوسب",
+            "mri": "تصوير بالرنين المغناطيسي",
+            "ultrasound": "تصوير بالموجات فوق الصوتية",
+            "normal": "طبيعي",
+            "abnormal": "غير طبيعي",
+            "brain": "الدماغ",
+            "heart": "القلب",
+            "lung": "الرئة",
+            "fracture": "كسر",
+            "pneumonia": "التهاب رئوي",
+            "tumor": "ورم",
+            "cancer": "سرطان",
+            "infection": "عدوى",
+            "liver": "الكبد",
+            "kidney": "الكلى",
+            "bone": "العظم",
+            "blood": "دم",
+            "artery": "شريان",
+            "vein": "وريد",
+            "benign": "حميد",
+            "malignant": "خبيث",
+            "healthy": "صحي",
+            "disease": "مرض"
+        }
 
+        answer_lower = answer_en.lower()
 
+        # Check for exact matches first
+        for term, translation in medical_terms.items():
+            if term in answer_lower:
+                answer_en = answer_en.replace(term, translation)
+
+        # Use general translation for the rest
+        return self._translate_text(answer_en, "en", "ar")
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Preprocess image for optimal performance"""
@@ -202,7 +193,6 @@ def _get_medical_translation(self, answer_en: str) -> str:
         except Exception as e:
             logger.error(f"Image preprocessing failed: {str(e)}")
             raise
-
 
     def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
         """Process medical VQA query"""
@@ -227,7 +217,6 @@ def _get_medical_translation(self, answer_en: str) -> str:
             if self.device != "cpu":
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-
             # Generate answer
             with torch.no_grad():
                 outputs = self.model.generate(
@@ -246,7 +235,6 @@ def _get_medical_translation(self, answer_en: str) -> str:
                 answer_ar = self._get_medical_translation(answer_en)
             else:
                 answer_ar = self._translate_text(answer_en, "en", "ar")
-
 
             return {
                 "question_en": question_en,
@@ -366,7 +354,6 @@ def validate_uploaded_file(uploaded_file) -> Tuple[bool, str]:
 
     return True, "Valid file"
 
-
 def main():
     """Main Streamlit application"""
     init_streamlit_config()
@@ -381,7 +368,6 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-
     # Initialize VQA system
     vqa_system = get_vqa_system()
 
@@ -394,7 +380,6 @@ def main():
             else:
                 st.error("❌ Failed to load AI models. Please refresh the page and try again.")
                 st.stop()
-
 
     # Create main interface
     col1, col2 = st.columns([1, 1], gap="large")
@@ -421,14 +406,12 @@ def main():
                     # Show image info
                     st.info(f"📊 Image size: {image.size[0]}×{image.size[1]} pixels | Format: {image.format}")
 
-
                 except Exception as e:
                     st.error(f"❌ Error loading image: {str(e)}")
                     uploaded_file = None
             else:
                 st.error(f"❌ {message}")
                 uploaded_file = None
-
 
     with col2:
         st.markdown("### 💭 Ask Your Question")
@@ -456,7 +439,6 @@ def main():
             help="Ask specific questions about the medical image"
         )
 
-
         # Analyze button
         analyze_button = st.button("🔍 Analyze Medical Image", use_container_width=True)
 
@@ -474,7 +456,6 @@ def main():
 
                         result = vqa_system.process_query(image, question)
                         processing_time = time.time() - start_time
-
 
                         if result["success"]:
                             # Display results
@@ -498,13 +479,11 @@ def main():
                             st.markdown(f"**⏱️ Processing Time:** {processing_time:.2f} seconds")
                             st.markdown(f"**🔍 Detected Language:** {'Arabic' if result['detected_language'] == 'ar' else 'English'}")
 
-
                         else:
                             st.error(f"❌ Analysis failed: {result.get('error', 'Unknown error')}")
 
                     except Exception as e:
                         st.error(f"❌ Processing error: {str(e)}")
-
 
     # Sidebar with information
     with st.sidebar:
@@ -535,7 +514,6 @@ def main():
         else:
             st.error("❌ AI Models: Not Loaded")
 
-
     # Footer
     st.markdown("---")
     st.markdown("""
@@ -544,7 +522,6 @@ def main():
         <p>⚠️ <em>This system is for educational and research purposes. Not a substitute for professional medical advice.</em></p>
     </div>
     """, unsafe_allow_html=True)
-
 
 if __name__ == "__main__":
     main()
