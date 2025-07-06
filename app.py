@@ -186,13 +186,7 @@ class MedicalVQASystem:
 
         answer_lower = answer_en.lower()
 
-        # Check for exact matches first
-        for term, translation in medical_terms.items():
-            if term in answer_lower:
-                answer_en = answer_en.replace(term, translation)
-
-        # Use general translation for the rest
-        return self._translate_text(answer_en, "en", "ar")
+    
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Preprocess image for optimal performance"""
@@ -211,62 +205,60 @@ class MedicalVQASystem:
             raise
 
     def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
-        """Process medical VQA query"""
-        try:
-            # Preprocess image
-            image = self._preprocess_image(image)
+    """Process medical VQA query"""
+    try:
+        # Preprocess image
+        image = self._preprocess_image(image)
 
-            # Detect language and prepare translations
-            detected_lang = self._detect_language(question)
+        # Detect language and prepare translations
+        detected_lang = self._detect_language(question)
 
-            if detected_lang == "ar":
-                question_ar = question.strip()
-                question_en = self._translate_text(question_ar, "ar", "en")
-            else:
-                question_en = question.strip()
-                question_ar = self._translate_text(question_en, "en", "ar")
+        if detected_lang == "ar":
+            question_ar = question.strip()
+            question_en = self._translate_text(question_ar, "ar", "en")
+        else:
+            question_en = question.strip()
+            question_ar = self._translate_text(question_en, "en", "ar")
 
-            # Process with BLIP model
-            inputs = self.processor(image, question_en, return_tensors="pt")
+        # Process with BLIP model using English question
+        inputs = self.processor(image, question_en, return_tensors="pt")
 
-            # Move inputs to device
-            if self.device != "cpu":
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        # Move inputs to device
+        if self.device != "cpu":
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-            # Generate answer
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_length=50,
-                    num_beams=4,
-                    early_stopping=True,
-                    do_sample=False
-                )
+        # Generate answer
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_length=50,
+                num_beams=4,
+                early_stopping=True,
+                do_sample=False
+            )
 
-            # Decode answer
-            answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+        # Decode answer
+        answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
 
-            # Get Arabic translation
-            if detected_lang == "ar":
-                answer_ar = self._get_medical_translation(answer_en)
-            else:
-                answer_ar = self._translate_text(answer_en, "en", "ar")
+        # Get proper Arabic translation
+        answer_ar = self._get_medical_translation(answer_en)
 
-            return {
-                "question_en": question_en,
-                "question_ar": question_ar,
-                "answer_en": answer_en,
-                "answer_ar": answer_ar,
-                "detected_language": detected_lang,
-                "success": True
-            }
+        return {
+            "question_en": question_en,
+            "question_ar": question_ar,
+            "answer_en": answer_en,
+            "answer_ar": answer_ar,
+            "detected_language": detected_lang,
+            "success": True
+        }
 
-        except Exception as e:
-            logger.error(f"Query processing failed: {str(e)}")
-            return {
-                "error": str(e),
-                "success": False
-            }
+    except Exception as e:
+        logger.error(f"Query processing failed: {str(e)}")
+        return {
+            "error": str(e),
+            "success": False
+        }
+
 
 # Initialize the VQA system
 @st.cache_resource(show_spinner=False)
