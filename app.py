@@ -139,35 +139,50 @@ class MedicalVQASystem:
 
         return text  # Return original if translation fails
 
+    
     def _get_medical_translation(self, answer_en: str) -> str:
         """Get medical-specific translation for common terms"""
         medical_terms = {
-            "chest x-ray": "أشعة سينية للصدر",
-            "x-ray": "أشعة سينية",
-            "ct scan": "تصوير مقطعي محوسب",
-            "mri": "تصوير بالرنين المغناطيسي",
-            "ultrasound": "تصوير بالموجات فوق الصوتية",
-            "normal": "طبيعي",
-            "abnormal": "غير طبيعي",
-            "brain": "الدماغ",
-            "heart": "القلب",
-            "lung": "الرئة",
-            "fracture": "كسر",
-            "pneumonia": "التهاب رئوي",
-            "tumor": "ورم",
-            "cancer": "سرطان",
-            "infection": "عدوى",
-            "liver": "الكبد",
-            "kidney": "الكلى",
-            "bone": "العظم",
-            "blood": "دم",
-            "artery": "شريان",
-            "vein": "وريد",
-            "benign": "حميد",
-            "malignant": "خبيث",
-            "healthy": "صحي",
-            "disease": "مرض"
+            # Basic medical terms
+            "chest": "صدر", "x-ray": "أشعة سينية", "ct scan": "أشعة مقطعية", 
+            "mri": "رنين مغناطيسي", "ultrasound": "موجات فوق صوتية",
+            "normal": "طبيعي", "abnormal": "غير طبيعي", "healthy": "صحي",
+        
+            # Body parts
+            "brain": "دماغ", "heart": "قلب", "lung": "رئة", "liver": "كبد", 
+            "kidney": "كلى", "bone": "عظم", "eye": "عين", "eyes": "عيون",
+            
+            # Medical conditions  
+            "fracture": "كسر", "pneumonia": "التهاب رئوي", "tumor": "ورم",
+            "infection": "التهاب", "cancer": "سرطان", "disease": "مرض",
+        
+            # Common findings
+            "room": "غرفة", "space": "مساحة", "area": "منطقة",
+            "fluid": "سوائل", "mass": "كتلة", "lesion": "آفة"
         }
+    
+        # First translate word by word for medical terms
+        translated_parts = []
+        words = answer_en.lower().split()
+    
+        for word in words:
+            # Clean punctuation
+            clean_word = word.strip('.,!?;:')
+            if clean_word in medical_terms:
+                translated_parts.append(medical_terms[clean_word])
+            else:
+                # Use general translation for unknown words
+                translated_word = self._translate_text(clean_word, "en", "ar")
+                translated_parts.append(translated_word)
+    
+        # Join and clean up
+        arabic_response = " ".join(translated_parts)
+    
+        # If translation failed or looks wrong, provide a generic medical response
+        if not arabic_response or arabic_response == answer_en or len(arabic_response) < 3:
+            return "تحتاج هذه الصورة الطبية إلى تقييم من قبل طبيب مختص للحصول على تشخيص دقيق"
+    
+        return arabic_response.strip()
 
         answer_lower = answer_en.lower()
 
@@ -472,7 +487,7 @@ def main():
                                 st.markdown(f"**Answer:** {result['answer_en']}")
 
                             with res_col2:
-                                st.markdown("**🇸🇦 النتائج بالعربية**")
+                                st.markdown("**🇪🇬 النتائج بالعربية**")
                                 st.markdown(f"**السؤال:** {result['question_ar']}", unsafe_allow_html=True)
                                 st.markdown(f"**الإجابة:** {result['answer_ar']}", unsafe_allow_html=True)
 
@@ -498,7 +513,7 @@ def main():
 
         **Supported Languages:**
         - English 🇺🇸
-        - Arabic 🇸🇦
+        - Arabic 🇪🇬
 
         **Supported Image Formats:**
         - JPG, JPEG, PNG, BMP, TIFF
