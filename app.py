@@ -63,12 +63,11 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("blip-vqa-medical-final")
+            self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
             logger.info("BLIP processor loaded successfully")
 
             # Try to load custom model first, fallback to base model
             model_names = [
-                "blip-vqa-medical-final"
                 "ButterflyCatGirl/Blip-Streamlit-chatbot",
                 "Salesforce/blip-vqa-base"
             ]
@@ -96,6 +95,7 @@ class MedicalVQASystem:
             if self.model is None:
                 raise Exception("Failed to load any BLIP model")
 
+
             # Load translation models
             try:
                 self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
@@ -107,6 +107,7 @@ class MedicalVQASystem:
                 logger.warning(f"Translation models failed to load: {str(e)}")
                 # Continue without translation - we'll handle this gracefully
 
+
             return True
 
         except Exception as e:
@@ -117,6 +118,7 @@ class MedicalVQASystem:
         """Detect if text is Arabic or English"""
         arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
         return "ar" if arabic_chars > 0 else "en"
+
 
     def _translate_text(self, text: str, source_lang: str, target_lang: str) -> str:
         """Translate text between Arabic and English"""
@@ -179,6 +181,7 @@ class MedicalVQASystem:
         # Use general translation for the rest
         return self._translate_text(answer_en, "en", "ar")
 
+
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Preprocess image for optimal performance"""
         try:
@@ -194,6 +197,7 @@ class MedicalVQASystem:
         except Exception as e:
             logger.error(f"Image preprocessing failed: {str(e)}")
             raise
+
 
     def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
         """Process medical VQA query"""
@@ -218,6 +222,7 @@ class MedicalVQASystem:
             if self.device != "cpu":
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
+
             # Generate answer
             with torch.no_grad():
                 outputs = self.model.generate(
@@ -236,6 +241,7 @@ class MedicalVQASystem:
                 answer_ar = self._get_medical_translation(answer_en)
             else:
                 answer_ar = self._translate_text(answer_en, "en", "ar")
+
 
             return {
                 "question_en": question_en,
@@ -355,6 +361,7 @@ def validate_uploaded_file(uploaded_file) -> Tuple[bool, str]:
 
     return True, "Valid file"
 
+
 def main():
     """Main Streamlit application"""
     init_streamlit_config()
@@ -369,6 +376,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
+
     # Initialize VQA system
     vqa_system = get_vqa_system()
 
@@ -381,6 +389,7 @@ def main():
             else:
                 st.error("❌ Failed to load AI models. Please refresh the page and try again.")
                 st.stop()
+
 
     # Create main interface
     col1, col2 = st.columns([1, 1], gap="large")
@@ -407,12 +416,14 @@ def main():
                     # Show image info
                     st.info(f"📊 Image size: {image.size[0]}×{image.size[1]} pixels | Format: {image.format}")
 
+
                 except Exception as e:
                     st.error(f"❌ Error loading image: {str(e)}")
                     uploaded_file = None
             else:
                 st.error(f"❌ {message}")
                 uploaded_file = None
+
 
     with col2:
         st.markdown("### 💭 Ask Your Question")
@@ -440,6 +451,7 @@ def main():
             help="Ask specific questions about the medical image"
         )
 
+
         # Analyze button
         analyze_button = st.button("🔍 Analyze Medical Image", use_container_width=True)
 
@@ -458,6 +470,7 @@ def main():
                         result = vqa_system.process_query(image, question)
                         processing_time = time.time() - start_time
 
+
                         if result["success"]:
                             # Display results
                             st.markdown("---")
@@ -472,7 +485,7 @@ def main():
                                 st.markdown(f"**Answer:** {result['answer_en']}")
 
                             with res_col2:
-                                st.markdown("**🇪🇬 النتائج بالعربية**")
+                                st.markdown("**🇸🇦 النتائج بالعربية**")
                                 st.markdown(f"**السؤال:** {result['question_ar']}", unsafe_allow_html=True)
                                 st.markdown(f"**الإجابة:** {result['answer_ar']}", unsafe_allow_html=True)
 
@@ -480,11 +493,13 @@ def main():
                             st.markdown(f"**⏱️ Processing Time:** {processing_time:.2f} seconds")
                             st.markdown(f"**🔍 Detected Language:** {'Arabic' if result['detected_language'] == 'ar' else 'English'}")
 
+
                         else:
                             st.error(f"❌ Analysis failed: {result.get('error', 'Unknown error')}")
 
                     except Exception as e:
                         st.error(f"❌ Processing error: {str(e)}")
+
 
     # Sidebar with information
     with st.sidebar:
@@ -498,8 +513,7 @@ def main():
 
         **Supported Languages:**
         - English 🇺🇸
-        - Arabic 🇪🇬
-
+        - Arabic 🇸🇦
 
         **Supported Image Formats:**
         - JPG, JPEG, PNG, BMP, TIFF
@@ -516,6 +530,7 @@ def main():
         else:
             st.error("❌ AI Models: Not Loaded")
 
+
     # Footer
     st.markdown("---")
     st.markdown("""
@@ -524,6 +539,7 @@ def main():
         <p>⚠️ <em>This system is for educational and research purposes. Not a substitute for professional medical advice.</em></p>
     </div>
     """, unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
