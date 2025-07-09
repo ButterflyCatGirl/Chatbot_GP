@@ -57,39 +57,33 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/Blip-Streamlit-chatbot")
-            logger.info("BLIP processor loaded successfully")
+            try:
+                self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+                logger.info("BLIP processor loaded successfully from Salesforce/blip-vqa-base")
+            except Exception as e:
+                logger.error(f"Failed to load BLIP processor from Salesforce/blip-vqa-base: {str(e)}")
+                return False
 
-            # Try to load custom model first, fallback to base model
-            model_names = [
-                "ButterflyCatGirl/Blip-Streamlit-chatbot",
-                "Salesforce/blip-vqa-base"
-            ]
+            # Load model
+            try:
+                logger.info("Attempting to load model from Salesforce/blip-vqa-base")
+                if self.device == "cpu":
+                    self.model = BlipForQuestionAnswering.from_pretrained(
+                        "Salesforce/blip-vqa-base",
+                        torch_dtype=torch.float32
+                    )
+                else:
+                    self.model = BlipForQuestionAnswering.from_pretrained(
+                        "Salesforce/blip-vqa-base",
+                        torch_dtype=torch.float16
+                    )
 
-            for model_name in model_names:
-                try:
-                    if self.device == "cpu":
-                        self.model = BlipForQuestionAnswering.from_pretrained(
-                            model_name,
-                            torch_dtype=torch.float32
-                        )
-                    else:
-                        self.model = BlipForQuestionAnswering.from_pretrained(
-                            model_name,
-                            torch_dtype=torch.float16
-                        )
-
-                    self.model = self.model.to(self.device)
-                    logger.info(f"BLIP model ({model_name}) loaded successfully on {self.device}")
-                    break
-                except Exception as e:
-                    logger.warning(f"Failed to load {model_name}: {str(e)}")
-                    continue
-
-            if self.model is None:
-                raise Exception("Failed to load any BLIP model")
-
-            return True
+                self.model = self.model.to(self.device)
+                logger.info(f"BLIP model loaded successfully from Salesforce/blip-vqa-base on {self.device}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to load model from Salesforce/blip-vqa-base: {str(e)}")
+                return False
 
         except Exception as e:
             logger.error(f"Model loading failed: {str(e)}")
@@ -279,7 +273,7 @@ def main():
             if success:
                 st.success("✅ Medical AI models loaded successfully!")
             else:
-                st.error("❌ Failed to load AI models. Please refresh the page and try again.")
+                st.error("❌ Failed to load AI models. Please refresh the page and try again. Check the logs for details or ensure an internet connection and compatible dependencies (transformers, torch).")
                 st.stop()
 
     # Create main interface
