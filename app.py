@@ -63,7 +63,7 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/Blip-Streamlit-chatbot")
             logger.info("BLIP processor loaded successfully")
 
             # Try to load custom model first, fallback to base model
@@ -427,16 +427,37 @@ def main():
         # Question input
         if language == "ar":
             question_placeholder = "اكتب سؤالك الطبي هنا... مثال: ما هو التشخيص المحتمل؟"
-            question_label = "السؤال الطبي:"
+            translated_placeholder = "Type your medical question here... Example: What is the likely diagnosis?"
         else:
             question_placeholder = "Type your medical question here... Example: What is the likely diagnosis?"
-            question_label = "Medical Question:"
+            translated_placeholder = "اكتب سؤالك الطبي هنا... مثال: ما هو التشخيص المحتمل؟"
 
+        # Input and translated question fields
         question = st.text_area(
-            question_label,
+            "Medical Question / السؤال الطبي:",
             height=150,
             placeholder=question_placeholder,
             help="Ask specific questions about the medical image"
+        )
+
+        # Translate question in real-time
+        if question.strip():
+            detected_lang = vqa_system._detect_language(question)
+            if detected_lang == "ar" and language == "en":
+                translated_question = vqa_system._translate_text(question, "ar", "en")
+            elif detected_lang == "en" and language == "ar":
+                translated_question = vqa_system._translate_text(question, "en", "ar")
+            else:
+                translated_question = question
+        else:
+            translated_question = ""
+
+        st.text_area(
+            "Translated Question / السؤال المترجم:",
+            value=translated_question,
+            height=150,
+            disabled=True,
+            help="This field shows the translated version of your question"
         )
 
         # Analyze button
