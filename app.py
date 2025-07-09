@@ -1,4 +1,3 @@
-
 # app.py - Complete Streamlit Medical VQA Chatbot with BLIP Model
 import streamlit as st
 from PIL import Image, ImageOps
@@ -64,11 +63,14 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/Blip-Streamlit-chatbot")
+            self.processor = BlipProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
             logger.info("BLIP processor loaded successfully")
 
             # Try to load custom model first, fallback to base model
             model_names = [
+                "Salesforce/blip2-opt-2.7b"
+                "Salesforce/blip2-flan-t5-xl"
+                "llava-hf/llava-1.5-7b-hf"
                 "ButterflyCatGirl/Blip-Streamlit-chatbot",
                 "Salesforce/blip-vqa-base"
             ]
@@ -150,23 +152,38 @@ class MedicalVQASystem:
             "normal": "طبيعي",
             "abnormal": "غير طبيعي",
             "brain": "الدماغ",
-            "heart": "القلب",
-            "lung": "الرئة",
             "fracture": "كسر",
+            "no abnormality detected": "لا توجد شذوذات",
+            "left lung": "الرئة اليسرى",
+            "right lung": "الرئة اليمنى",
             "pneumonia": "التهاب رئوي",
             "tumor": "ورم",
             "cancer": "سرطان",
             "infection": "عدوى",
+            "heart": "القلب",
             "liver": "الكبد",
             "kidney": "الكلى",
             "bone": "العظم",
-            "blood": "دم",
+            "blood vessel": "وعاء دموي",
             "artery": "شريان",
             "vein": "وريد",
             "benign": "حميد",
-            "malignant": "خبيث",
-            "healthy": "صحي",
-            "disease": "مرض"
+            "malignant": "خبيث"
+            "pneumothorax": "انفجار الرئة",
+            "cardiomegaly": "تكبر القلب",
+            "atelectasis": "انخماص الرئة",
+            "pleural effusion": "استسقاء جنبي",
+            "osteoporosis": "هشاشة العظام",
+            "metastasis": "انتشار النقائل",
+            "hemorrhage": "نزيف",
+            "edema": "ورم",
+            "calcification": "تكلس",
+            # Common anatomical terms
+            "left ventricle": "البطين الأيسر",
+            "right atrium": "ال Auricle الأيمن",
+            "aorta": "الشريان الأورطي",
+            "pulmonary artery": "الشريان الرئوي"
+
         }
 
         answer_lower = answer_en.lower()
@@ -498,7 +515,7 @@ def main():
 
         **Supported Languages:**
         - English 🇺🇸
-        - Arabic 🇪🇬
+        - Arabic 🇸🇦
 
         **Supported Image Formats:**
         - JPG, JPEG, PNG, BMP, TIFF
