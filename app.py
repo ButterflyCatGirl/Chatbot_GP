@@ -4,7 +4,9 @@ from PIL import Image, ImageOps
 import torch
 from transformers import (
     BlipProcessor,
-    BlipForQuestionAnswering
+    BlipForQuestionAnswering,
+    MarianTokenizer,
+    MarianMTModel
 )
 import logging
 import time
@@ -34,6 +36,10 @@ class MedicalVQASystem:
     def __init__(self):
         self.processor = None
         self.model = None
+        self.ar_en_tokenizer = None
+        self.ar_en_model = None
+        self.en_ar_tokenizer = None
+        self.en_ar_model = None
         self.device = self._get_device()
 
     def _get_device(self) -> str:
@@ -57,37 +63,120 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            try:
-                self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
-                logger.info("BLIP processor loaded successfully from Salesforce/blip-vqa-base")
-            except Exception as e:
-                logger.error(f"Failed to load BLIP processor from Salesforce/blip-vqa-base: {str(e)}")
-                return False
+            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/Blip-Streamlit-chatbot")
+            logger.info("BLIP processor loaded successfully")
 
-            # Load model
-            try:
-                logger.info("Attempting to load model from Salesforce/blip-vqa-base")
-                if self.device == "cpu":
-                    self.model = BlipForQuestionAnswering.from_pretrained(
-                        "Salesforce/blip-vqa-base",
-                        torch_dtype=torch.float32
-                    )
-                else:
-                    self.model = BlipForQuestionAnswering.from_pretrained(
-                        "Salesforce/blip-vqa-base",
-                        torch_dtype=torch.float16
-                    )
+            # Try to load custom model first, fallback to base model
+            model_names = [
+                "ButterflyCatGirl/Blip-Streamlit-chatbot",
+                "Salesforce/blip-vqa-base"
+            ]
 
-                self.model = self.model.to(self.device)
-                logger.info(f"BLIP model loaded successfully from Salesforce/blip-vqa-base on {self.device}")
-                return True
+            for model_name in model_names:
+                try:
+                    if self.device == "cpu":
+                        self.model = BlipForQuestionAnswering.from_pretrained(
+                            model_name,
+                            torch_dtype=torch.float32
+                        )
+                    else:
+                        self.model = BlipForQuestionAnswering.from_pretrained(
+                            model_name,
+                            torch_dtype=torch.float16
+                        )
+
+                    self.model = self.model.to(self.device)
+                    logger.info(f"BLIP model ({model_name}) loaded successfully on {self.device}")
+                    break
+                except Exception as e:
+                    logger.warning(f"Failed to load {model_name}: {str(e)}")
+                    continue
+
+            if self.model is None:
+                raise Exception("Failed to load any BLIP model")
+
+            # Load translation models
+            try:
+                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
+                self.ar_en_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
+                self.en_ar_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
+                self.en_ar_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
+                logger.info("Translation models loaded successfully")
             except Exception as e:
-                logger.error(f"Failed to load model from Salesforce/blip-vqa-base: {str(e)}")
-                return False
+                logger.warning(f"Translation models failed to load: {str(e)}")
+                # Continue without translation - we'll handle this gracefully
+
+            return True
 
         except Exception as e:
             logger.error(f"Model loading failed: {str(e)}")
             return False
+
+    def _detect_language(self, text: str) -> str:
+        """Detect if text is Arabic or English"""
+        arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
+        return "ar" if arabic_chars > 0 else "en"
+
+    def _translate_text(self, text: str, source_lang: str, target_lang: str) -> str:
+        """Translate text between Arabic and English"""
+        if source_lang == target_lang:
+            return text
+
+        try:
+            if source_lang == "ar" and target_lang == "en" and self.ar_en_tokenizer:
+                inputs = self.ar_en_tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+                outputs = self.ar_en_model.generate(**inputs, max_length=512, num_beams=4, early_stopping=True)
+                return self.ar_en_tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+            elif source_lang == "en" and target_lang == "ar" and self.en_ar_tokenizer:
+                inputs = self.en_ar_tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+                outputs = self.en_ar_model.generate(**inputs, max_length=512, num_beams=4, early_stopping=True)
+                return self.en_ar_tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+        except Exception as e:
+            logger.warning(f"Translation failed: {str(e)}")
+
+        return text  # Return original if translation fails
+
+    def _get_medical_translation(self, answer_en: str) -> str:
+        """Get medical-specific translation for common terms"""
+        medical_terms = {
+            "chest x-ray": "أشعة سينية للصدر",
+            "x-ray": "أشعة سينية",
+            "ct scan": "تصوير مقطعي محوسب",
+            "mri": "تصوير بالرنين المغناطيسي",
+            "ultrasound": "تصوير بالموجات فوق الصوتية",
+            "normal": "طبيعي",
+            "abnormal": "غير طبيعي",
+            "brain": "الدماغ",
+            "heart": "القلب",
+            "lung": "الرئة",
+            "fracture": "كسر",
+            "pneumonia": "التهاب رئوي",
+            "tumor": "ورم",
+            "cancer": "سرطان",
+            "infection": "عدوى",
+            "liver": "الكبد",
+            "kidney": "الكلى",
+            "bone": "العظم",
+            "blood": "دم",
+            "artery": "شريان",
+            "vein": "وريد",
+            "benign": "حميد",
+            "malignant": "خبيث",
+            "healthy": "صحي",
+            "disease": "مرض"
+        }
+
+        answer_lower = answer_en.lower()
+
+        # Check for exact matches first
+        for term, translation in medical_terms.items():
+            if term in answer_lower:
+                answer_en = answer_en.replace(term, translation)
+
+        # Use general translation for the rest
+        return self._translate_text(answer_en, "en", "ar")
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Preprocess image for optimal performance"""
@@ -108,14 +197,21 @@ class MedicalVQASystem:
     def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
         """Process medical VQA query"""
         try:
-            if not question or not question.strip():
-                raise ValueError("No valid question provided")
-
             # Preprocess image
             image = self._preprocess_image(image)
 
-            # Process with BLIP model using the original question
-            inputs = self.processor(images=image, text=question, return_tensors="pt")
+            # Detect language and prepare translations
+            detected_lang = self._detect_language(question)
+
+            if detected_lang == "ar":
+                question_ar = question.strip()
+                question_en = self._translate_text(question_ar, "ar", "en")
+            else:
+                question_en = question.strip()
+                question_ar = self._translate_text(question_en, "en", "ar")
+
+            # Process with BLIP model
+            inputs = self.processor(image, question_en, return_tensors="pt")
 
             # Move inputs to device
             if self.device != "cpu":
@@ -132,11 +228,20 @@ class MedicalVQASystem:
                 )
 
             # Decode answer
-            answer = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+            answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+
+            # Get Arabic translation
+            if detected_lang == "ar":
+                answer_ar = self._get_medical_translation(answer_en)
+            else:
+                answer_ar = self._translate_text(answer_en, "en", "ar")
 
             return {
-                "question": question,
-                "answer": answer,
+                "question_en": question_en,
+                "question_ar": question_ar,
+                "answer_en": answer_en,
+                "answer_ar": answer_ar,
+                "detected_language": detected_lang,
                 "success": True
             }
 
@@ -273,7 +378,7 @@ def main():
             if success:
                 st.success("✅ Medical AI models loaded successfully!")
             else:
-                st.error("❌ Failed to load AI models. Please refresh the page and try again. Check the logs for details or ensure an internet connection and compatible dependencies (transformers, torch).")
+                st.error("❌ Failed to load AI models. Please refresh the page and try again.")
                 st.stop()
 
     # Create main interface
@@ -357,11 +462,22 @@ def main():
                             st.markdown("---")
                             st.markdown("### 📋 Analysis Results")
 
-                            st.markdown(f"**Question:** {result['question']}")
-                            st.markdown(f"**Answer:** {result['answer']}")
+                            # Create result columns
+                            res_col1, res_col2 = st.columns(2)
+
+                            with res_col1:
+                                st.markdown("**🇺🇸 English Results**")
+                                st.markdown(f"**Question:** {result['question_en']}")
+                                st.markdown(f"**Answer:** {result['answer_en']}")
+
+                            with res_col2:
+                                st.markdown("**🇪🇬 النتائج بالعربية**")
+                                st.markdown(f"**السؤال:** {result['question_ar']}", unsafe_allow_html=True)
+                                st.markdown(f"**الإجابة:** {result['answer_ar']}", unsafe_allow_html=True)
 
                             # Processing info
                             st.markdown(f"**⏱️ Processing Time:** {processing_time:.2f} seconds")
+                            st.markdown(f"**🔍 Detected Language:** {'Arabic' if result['detected_language'] == 'ar' else 'English'}")
 
                         else:
                             st.error(f"❌ Analysis failed: {result.get('error', 'Unknown error')}")
