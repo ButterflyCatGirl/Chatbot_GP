@@ -63,14 +63,11 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
+            self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
             logger.info("BLIP processor loaded successfully")
 
             # Try to load custom model first, fallback to base model
             model_names = [
-                "Salesforce/blip2-opt-2.7b"
-                "Salesforce/blip2-flan-t5-xl"
-                "llava-hf/llava-1.5-7b-hf"
                 "ButterflyCatGirl/Blip-Streamlit-chatbot",
                 "Salesforce/blip-vqa-base"
             ]
@@ -99,16 +96,11 @@ class MedicalVQASystem:
                 raise Exception("Failed to load any BLIP model")
 
             # Load translation models
-
             try:
-               # Use larger context window models
-                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("UBC-NLP/ara-eng-news")
-                self.ar_en_model = MarianMTModel.from_pretrained("UBC-NLP/ara-eng-news")
-
-                # For clinical terms
+                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
+                self.ar_en_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
                 self.en_ar_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
                 self.en_ar_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
-
                 logger.info("Translation models loaded successfully")
             except Exception as e:
                 logger.warning(f"Translation models failed to load: {str(e)}")
@@ -119,20 +111,6 @@ class MedicalVQASystem:
         except Exception as e:
             logger.error(f"Model loading failed: {str(e)}")
             return False
-
-
-    for pattern in invalid_sequences:
-        if re.search(pattern, text):
-        return False
-
-    # Check for logical word order
-    medical_verbs = ["تشخيص", "تحليل", "تصوير"]
-    for verb in medical_verbs:
-        if text.startswith(verb) and not text.endswith("النتائج"):
-            return False
-
-    return True
-
 
     def _detect_language(self, text: str) -> str:
         """Detect if text is Arabic or English"""
@@ -171,38 +149,23 @@ class MedicalVQASystem:
             "normal": "طبيعي",
             "abnormal": "غير طبيعي",
             "brain": "الدماغ",
+            "heart": "القلب",
+            "lung": "الرئة",
             "fracture": "كسر",
-            "no abnormality detected": "لا توجد شذوذات",
-            "left lung": "الرئة اليسرى",
-            "right lung": "الرئة اليمنى",
             "pneumonia": "التهاب رئوي",
             "tumor": "ورم",
             "cancer": "سرطان",
             "infection": "عدوى",
-            "heart": "القلب",
             "liver": "الكبد",
             "kidney": "الكلى",
             "bone": "العظم",
-            "blood vessel": "وعاء دموي",
+            "blood": "دم",
             "artery": "شريان",
             "vein": "وريد",
             "benign": "حميد",
             "malignant": "خبيث",
-            "pneumothorax": "انفجار الرئة",
-            "cardiomegaly": "تكبر القلب",
-            "atelectasis": "انخماص الرئة",
-            "pleural effusion": "استسقاء جنبي",
-            "osteoporosis": "هشاشة العظام",
-            "metastasis": "انتشار النقائل",
-            "hemorrhage": "نزيف",
-            "edema": "ورم",
-            "calcification": "تكلس",
-            # Common anatomical terms
-            "left ventricle": "البطين الأيسر",
-            "right atrium": "ال Auricle الأيمن",
-            "aorta": "الشريان الأورطي",
-            "pulmonary artery": "الشريان الرئوي"
-
+            "healthy": "صحي",
+            "disease": "مرض"
         }
 
         answer_lower = answer_en.lower()
@@ -372,12 +335,6 @@ def apply_custom_css():
             direction: rtl;
             text-align: right;
         }
-
-        .rtl {
-            direction: rtl;
-            text-align: right;
-            font-family: 'Noto Sans Arabic', sans-serif;
-        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -514,9 +471,9 @@ def main():
                                 st.markdown(f"**Answer:** {result['answer_en']}")
 
                             with res_col2:
-                                st.markdown("**🇪🇬 النتائج بالعربية**")
-                                st.markdown(f"**السؤال:** <div class='rtl'>{result['question_ar']}</div>", unsafe_allow_html=True)
-                                st.markdown(f"**الإجابة:** <div class='rtl'>{result['answer_ar']}</div>", unsafe_allow_html=True)
+                                st.markdown("**🇸🇦 النتائج بالعربية**")
+                                st.markdown(f"**السؤال:** {result['question_ar']}", unsafe_allow_html=True)
+                                st.markdown(f"**الإجابة:** {result['answer_ar']}", unsafe_allow_html=True)
 
                             # Processing info
                             st.markdown(f"**⏱️ Processing Time:** {processing_time:.2f} seconds")
