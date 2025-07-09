@@ -4,9 +4,7 @@ from PIL import Image, ImageOps
 import torch
 from transformers import (
     BlipProcessor,
-    BlipForQuestionAnswering,
-    MarianTokenizer,
-    MarianMTModel
+    BlipForQuestionAnswering
 )
 import logging
 import time
@@ -36,10 +34,6 @@ class MedicalVQASystem:
     def __init__(self):
         self.processor = None
         self.model = None
-        self.ar_en_tokenizer = None
-        self.ar_en_model = None
-        self.en_ar_tokenizer = None
-        self.en_ar_model = None
         self.device = self._get_device()
 
     def _get_device(self) -> str:
@@ -95,88 +89,11 @@ class MedicalVQASystem:
             if self.model is None:
                 raise Exception("Failed to load any BLIP model")
 
-            # Load translation models
-            try:
-                self.ar_en_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
-                self.ar_en_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
-                self.en_ar_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
-                self.en_ar_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-ar")
-                logger.info("Translation models loaded successfully")
-            except Exception as e:
-                logger.warning(f"Translation models failed to load: {str(e)}")
-                # Continue without translation - we'll handle this gracefully
-
             return True
 
         except Exception as e:
             logger.error(f"Model loading failed: {str(e)}")
             return False
-
-    def _detect_language(self, text: str) -> str:
-        """Detect if text is Arabic or English"""
-        arabic_chars = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
-        return "ar" if arabic_chars > 0 else "en"
-
-    def _translate_text(self, text: str, source_lang: str, target_lang: str) -> str:
-        """Translate text between Arabic and English"""
-        if source_lang == target_lang:
-            return text
-
-        try:
-            if source_lang == "ar" and target_lang == "en" and self.ar_en_tokenizer:
-                inputs = self.ar_en_tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-                outputs = self.ar_en_model.generate(**inputs, max_length=512, num_beams=4, early_stopping=True)
-                return self.ar_en_tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
-
-            elif source_lang == "en" and target_lang == "ar" and self.en_ar_tokenizer:
-                inputs = self.en_ar_tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-                outputs = self.en_ar_model.generate(**inputs, max_length=512, num_beams=4, early_stopping=True)
-                return self.en_ar_tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
-
-        except Exception as e:
-            logger.warning(f"Translation failed: {str(e)}")
-
-        return text  # Return original if translation fails
-
-    def _get_medical_translation(self, answer_en: str) -> str:
-        """Get medical-specific translation for common terms"""
-        medical_terms = {
-            "chest x-ray": "أشعة سينية للصدر",
-            "x-ray": "أشعة سينية",
-            "ct scan": "تصوير مقطعي محوسب",
-            "mri": "تصوير بالرنين المغناطيسي",
-            "ultrasound": "تصوير بالموجات فوق الصوتية",
-            "normal": "طبيعي",
-            "abnormal": "غير طبيعي",
-            "brain": "الدماغ",
-            "heart": "القلب",
-            "lung": "الرئة",
-            "fracture": "كسر",
-            "pneumonia": "التهاب رئوي",
-            "tumor": "ورم",
-            "cancer": "سرطان",
-            "infection": "عدوى",
-            "liver": "الكبد",
-            "kidney": "الكلى",
-            "bone": "العظم",
-            "blood": "دم",
-            "artery": "شريان",
-            "vein": "وريد",
-            "benign": "حميد",
-            "malignant": "خبيث",
-            "healthy": "صحي",
-            "disease": "مرض"
-        }
-
-        answer_lower = answer_en.lower()
-
-        # Check for exact matches first
-        for term, translation in medical_terms.items():
-            if term in answer_lower:
-                answer_en = answer_en.replace(term, translation)
-
-        # Use general translation for the rest
-        return self._translate_text(answer_en, "en", "ar")
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Preprocess image for optimal performance"""
@@ -200,18 +117,8 @@ class MedicalVQASystem:
             # Preprocess image
             image = self._preprocess_image(image)
 
-            # Detect language and prepare translations
-            detected_lang = self._detect_language(question)
-
-            if detected_lang == "ar":
-                question_ar = question.strip()
-                question_en = self._translate_text(question_ar, "ar", "en")
-            else:
-                question_en = question.strip()
-                question_ar = self._translate_text(question_en, "en", "ar")
-
-            # Process with BLIP model
-            inputs = self.processor(image, question_en, return_tensors="pt")
+            # Process with BLIP model using the original question
+            inputs = self.processor(image, question, return_tensors="pt")
 
             # Move inputs to device
             if self.device != "cpu":
@@ -228,20 +135,11 @@ class MedicalVQASystem:
                 )
 
             # Decode answer
-            answer_en = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
-
-            # Get Arabic translation
-            if detected_lang == "ar":
-                answer_ar = self._get_medical_translation(answer_en)
-            else:
-                answer_ar = self._translate_text(answer_en, "en", "ar")
+            answer = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
 
             return {
-                "question_en": question_en,
-                "question_ar": question_ar,
-                "answer_en": answer_en,
-                "answer_ar": answer_ar,
-                "detected_language": detected_lang,
+                "question": question,
+                "answer": answer,
                 "success": True
             }
 
@@ -427,37 +325,16 @@ def main():
         # Question input
         if language == "ar":
             question_placeholder = "اكتب سؤالك الطبي هنا... مثال: ما هو التشخيص المحتمل؟"
-            translated_placeholder = "Type your medical question here... Example: What is the likely diagnosis?"
+            question_label = "السؤال الطبي:"
         else:
             question_placeholder = "Type your medical question here... Example: What is the likely diagnosis?"
-            translated_placeholder = "اكتب سؤالك الطبي هنا... مثال: ما هو التشخيص المحتمل؟"
+            question_label = "Medical Question:"
 
-        # Input and translated question fields
         question = st.text_area(
-            "Medical Question / السؤال الطبي:",
+            question_label,
             height=150,
             placeholder=question_placeholder,
             help="Ask specific questions about the medical image"
-        )
-
-        # Translate question in real-time
-        if question.strip():
-            detected_lang = vqa_system._detect_language(question)
-            if detected_lang == "ar" and language == "en":
-                translated_question = vqa_system._translate_text(question, "ar", "en")
-            elif detected_lang == "en" and language == "ar":
-                translated_question = vqa_system._translate_text(question, "en", "ar")
-            else:
-                translated_question = question
-        else:
-            translated_question = ""
-
-        st.text_area(
-            "Translated Question / السؤال المترجم:",
-            value=translated_question,
-            height=150,
-            disabled=True,
-            help="This field shows the translated version of your question"
         )
 
         # Analyze button
@@ -483,22 +360,11 @@ def main():
                             st.markdown("---")
                             st.markdown("### 📋 Analysis Results")
 
-                            # Create result columns
-                            res_col1, res_col2 = st.columns(2)
-
-                            with res_col1:
-                                st.markdown("**🇺🇸 English Results**")
-                                st.markdown(f"**Question:** {result['question_en']}")
-                                st.markdown(f"**Answer:** {result['answer_en']}")
-
-                            with res_col2:
-                                st.markdown("**🇪🇬 النتائج بالعربية**")
-                                st.markdown(f"**السؤال:** {result['question_ar']}", unsafe_allow_html=True)
-                                st.markdown(f"**الإجابة:** {result['answer_ar']}", unsafe_allow_html=True)
+                            st.markdown(f"**Question:** {result['question']}")
+                            st.markdown(f"**Answer:** {result['answer']}")
 
                             # Processing info
                             st.markdown(f"**⏱️ Processing Time:** {processing_time:.2f} seconds")
-                            st.markdown(f"**🔍 Detected Language:** {'Arabic' if result['detected_language'] == 'ar' else 'English'}")
 
                         else:
                             st.error(f"❌ Analysis failed: {result.get('error', 'Unknown error')}")
