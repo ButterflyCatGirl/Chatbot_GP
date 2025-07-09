@@ -114,11 +114,14 @@ class MedicalVQASystem:
     def process_query(self, image: Image.Image, question: str) -> Dict[str, Any]:
         """Process medical VQA query"""
         try:
+            if not question or not question.strip():
+                raise ValueError("No valid question provided")
+
             # Preprocess image
             image = self._preprocess_image(image)
 
             # Process with BLIP model using the original question
-            inputs = self.processor(image, question, return_tensors="pt")
+            inputs = self.processor(images=image, text=question, return_tensors="pt")
 
             # Move inputs to device
             if self.device != "cpu":
