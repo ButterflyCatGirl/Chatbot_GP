@@ -63,7 +63,7 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/llava-medical-VQA-lora-merged3")
             logger.info("BLIP processor loaded successfully")
 
             # Try to load custom model first, fallback to base model
