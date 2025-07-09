@@ -168,7 +168,7 @@ class MedicalVQASystem:
             "artery": "شريان",
             "vein": "وريد",
             "benign": "حميد",
-            "malignant": "خبيث"
+            "malignant": "خبيث",
             "pneumothorax": "انفجار الرئة",
             "cardiomegaly": "تكبر القلب",
             "atelectasis": "انخماص الرئة",
