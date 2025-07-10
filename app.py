@@ -63,7 +63,7 @@ class MedicalVQASystem:
             self._clear_memory()
 
             # Load BLIP processor
-            self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+            self.processor = BlipProcessor.from_pretrained("ButterflyCatGirl/Blip-Streamlit-chatbot")
             logger.info("BLIP processor loaded successfully")
 
             # Try to load custom model first, fallback to base model
@@ -471,7 +471,7 @@ def main():
                                 st.markdown(f"**Answer:** {result['answer_en']}")
 
                             with res_col2:
-                                st.markdown("**🇸🇦 النتائج بالعربية**")
+                                st.markdown("**🇪🇬 النتائج بالعربية**")
                                 st.markdown(f"**السؤال:** {result['question_ar']}", unsafe_allow_html=True)
                                 st.markdown(f"**الإجابة:** {result['answer_ar']}", unsafe_allow_html=True)
 
@@ -497,7 +497,7 @@ def main():
 
         **Supported Languages:**
         - English 🇺🇸
-        - Arabic 🇸🇦
+        - Arabic 🇪🇬
 
         **Supported Image Formats:**
         - JPG, JPEG, PNG, BMP, TIFF
